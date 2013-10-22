@@ -133,8 +133,6 @@ def main():
 	#create a bunch of queue threads
 	for i in xrange(0,len(itemz)-1):
 		t = Thread(target=Queues().search_worker(),name="search-%d" % (i)).start()
-	#create 100 download threads
-	for i in xrange(0,100):
 		t = Thread(target=Queues().download_worker(),name="download-%d" % (i)).start()
 	sys.exit()
 
