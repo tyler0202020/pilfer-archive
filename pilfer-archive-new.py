@@ -21,6 +21,29 @@
 
 
 
+#--
+#
+# Name: pilfer-archive-new (attempt #2)
+# Description: Pilfer Archive.org for files to fuzz. Fixed a few threading issues and organized the code better.
+#              It still needs a little bit of work but thread stability is much better. glhf.
+# Author(s): level@coresecurity.com
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT 
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+# POSSIBILITY OF SUCH DAMAGE.
+#
+#
+#--
+
+
+
 import re, urllib2, socket, json, os, Queue, sys
 from threading import Thread
 
@@ -61,7 +84,7 @@ class Discover:
                                         titles.append(data["response"]["docs"][i]["title"])
 			except Exception as e:
                                 pass
-		return titles
+		return titles[:500]
 	def get_locations(self,titles):
 		urls = []
 		for title in titles:
@@ -72,7 +95,7 @@ class Discover:
 			except Exception as e:
 				if (debug == True): print "[*] DEBUG -- Function: Discover().get_locations('%s') Exception: %s" % (title,e)
 				pass
-		return urls
+		return urls[:500]
 	def get_file_links(self,urls):
 		files = {}
 		for url in urls:
@@ -96,13 +119,13 @@ class Queues:
 			total = 0
 			for url in files.iterkeys():
                                 if (total >= 500):
-                                        searchQueue.task_done()
+                                        searchQueue.clear()
                                 else:
                                         total+=len(files[url])
                                         for file in files[url]:
                                                 downloadQueue.put("%s/%s" % (url,file))
                         if (log == True): print "[*] %d files for %s are in the download queue" % (total,item)
-                searchQueue.task_done()
+                	searchQueue.clear()
 		return
 	def download_worker(self):
                 while True:
@@ -113,22 +136,7 @@ class Queues:
 				
 def main():
 	#define file types
-	itemz = ['xcf', 'pix', 'matte', 'mask', 'alpha', 'fli', 'flc', 'xcf.bz2', 'xcfbz2', 'desktop', 
-	'dcm', 'dicom', 'eps', 'fit', 'fits', 'g3', 'gif', 'gbr', 'gpb', 'gih', 'pat', 'xcf.gz', 'xcfgz', 
-	'jp2', 'jpc', 'jpx', 'j2k', 'jpg', 'jpeg', 'jpe', 'cel', 'ico', 'wmf', 'apm', 'ora', 'psp', 'tub', 
-	'pspimage', 'psd', 'png', 'pnm', 'ppm', 'pgm', 'pbm', 'png', 'pnm', 'ppm', 'pgm', 'pbm', 'pdf', 'ps', 
-	'data', 'sgi','rgb', 'rgba', 'bw', 'im1', 'im8', 'im24', 'im32', 'svg', 'tga', 'vda', 'icb', 'vst', 
-	'tif', 'tiff', 'bmp', 'xbm', 'icon', 'bitmap', 'xpm', 'xwd', 'pcx', 'pcc', 'torrent', 'mpeg', 'mp1v', 
-	'mpg1', 'pim1', 'mp2v', 'mpg2', 'vcr2', 'hdv1', 'hdv2', 'hdv3', 'mxn', 'mxp', 'div1', 'div2', 'div3', 
-	'mp41', 'mp42', 'mpg3', 'mpg4', 'div4', 'div5', 'div6', 'col1', 'col0', '3ivd', 'divx', 'xvid', 'mp4s', 
-	'm4s2', 'xvid', 'mp4v', 'fmp4', '3iv2', 'smp4', 'h261', 'h262', 'h263', 'h264', 's264', 'avc1', 'davc',
-	'x264', 'vssh', 'svq1', 'svq3', 'cvid', 'thra', 'wmv1', 'wmv2', 'wmv3', 'wvc1', 'wmva', 'vp31', 'vp30', 
-	'vp3', 'vp50', 'vp5', 'vp51', 'vp60','vp61', 'vp62', 'vp6f', 'vp6a', 'vp7', 'fsv1', 'iv31', 'iv32', 'iv41', 
-	'iv51', 'rv10', 'rv13', 'rv20', 'rv30', 'rv40', 'bbcd', 'rle', 'smc', 'rpza', 'qdrw', 'asv1', 'mpga', 'mp3', 
-	'lame', 'mp4a', 'a52', 'a52b', 'ilbc', 'qclp', 'lpcj', '28_8', 'dnet', 'sipr', 'cook', 'atrc', 'raac', 'racp', 
-	'ralf', 'shrn', 'spec', 'vorb', 'dts', 'flac', 'alac', 'samr', 'sonc', '3gp', 'asf', 'wmv', 'au', 'avi', 'flv', 
-	'mov', 'mp4', 'ogm', 'ogg', 'mkv', 'mka', 'ts', 'mpg', 'nsc', 'nsv', 'nut', 'ra', 'ram', 'rm', 'rv', 'rmbv', 
-	'vid', 'tta', 'tac', 'ty', 'wav', 'xa']
+	itemz = ['3g2', '3gp', '3gp2', '3gpp', 'amv', 'asf', 'avi', 'bin', 'divx','drc','dv','f4v','flv','gxf','iso','m1v','m4v','m2t','m2v','mov','mp2','mp2v','mpa']
 	#drop terms into queue
 	for item in itemz:
 		searchQueue.put(item)
@@ -140,4 +148,3 @@ def main():
 
 if __name__=="__main__":
 	main()
-
